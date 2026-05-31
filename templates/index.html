@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -75,11 +76,24 @@ button {
     cursor: pointer;
 }
 </style>
+
 </head>
 
 <body>
 
 <div class="container">
+
+    <!-- 🔥 TOP BAR -->
+    <div style="padding:10px; background:#e0f2fe; display:flex; justify-content:space-between; align-items:center;">
+        
+        <div>
+            <h3 style="margin:0;">Welcome {{ user }}</h3>
+            <a href="/history">📜 View Chat History</a>
+        </div>
+
+        <a href="/logout" style="text-decoration:none; font-weight:bold;">Logout</a>
+    </div>
+
     <h1>🐢 Green Turtle AI</h1>
 
     <div id="chatBox">
@@ -93,6 +107,7 @@ button {
         <button onclick="sendMessage()">Send</button>
         <button onclick="toggleVoice()">🔊</button>
     </div>
+
 </div>
 
 <script>
@@ -177,13 +192,11 @@ function toggleVoice() {
 
     if (!lastResponse) return;
 
-    // start speaking
     if (!isSpeaking) {
         speakText(lastResponse);
         return;
     }
 
-    // stop speaking
     window.speechSynthesis.cancel();
     isSpeaking = false;
 }

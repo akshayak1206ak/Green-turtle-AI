@@ -1,28 +1,61 @@
-from flask import Flask, render_template, request
-from chatbot import get_response
+from flask import Flask, render_template, request, redirect, url_for, session
+import sqlite3
+from flask_bcrypt import Bcrypt
+from database import init_db
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"
+bcrypt = Bcrypt(app)
 
-# Home Page
-@app.route('/')
-def home():
-    return render_template("index.html")
+init_db()
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
 
+        hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
-# Chatbot Response
-@app.route('/get')
-def chatbot_response():
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
 
-    user_text = request.args.get('msg')
+        try:
+            cursor.execute("INSERT INTO users (email, password) VALUES (?, ?)",
+                           (email, hashed_password))
+            conn.commit()
+        except:
+            return "User already exists!"
 
-    response = get_response(user_text)
+        conn.close()
+        return redirect(url_for("login"))
 
-    return response
+    return render_template("register.html")
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
 
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
 
-# Run Flask Server
-# Run Flask Server
-if __name__ == '__main__':
+        cursor.execute("SELECT * FROM users WHERE email=?", (email,))
+        user = cursor.fetchone()
+        conn.close()
 
-    app.run(host="0.0.0.0", port=5000, debug=False)
+        if user and bcrypt.check_password_hash(user[2], password):
+            session["user"] = email
+            return redirect(url_for("chat"))
+        else:
+            return "Invalid credentials"
 
+    return render_template("login.html")
+@app.route("/chat")
+def chat():
+    if "user" not in session:
+        return redirect(url_for("login"))
+
+    return render_template("index.html", user=session["user"])@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("login"))
