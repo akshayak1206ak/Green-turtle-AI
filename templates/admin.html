@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard - Green Turtle AI</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #f1f5f9;
+}
+
+.header {
+    background: #0f766e;
+    color: white;
+    padding: 15px;
+    text-align: center;
+}
+
+.nav {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 15px;
+    background: #e0f2fe;
+}
+
+.nav a {
+    text-decoration: none;
+    font-weight: bold;
+    color: #0f766e;
+}
+
+.container {
+    width: 90%;
+    margin: auto;
+}
+
+.card {
+    background: white;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background: #0f766e;
+    color: white;
+}
+
+input {
+    padding: 8px;
+    margin: 5px;
+    width: 250px;
+}
+
+button {
+    padding: 8px 15px;
+    background: #0f766e;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+    <h1>🐢 Green Turtle AI - Admin Panel</h1>
+</div>
+
+<!-- NAVIGATION -->
+<div class="nav">
+    <a href="/admin">🏠 Dashboard</a>
+    <a href="/analytics">📊 Analytics</a>
+    <a href="/logout">🚪 Logout</a>
+</div>
+
+<div class="container">
+
+    <!-- USERS -->
+    <div class="card">
+        <h2>👤 Registered Users</h2>
+
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+            </tr>
+
+            {% for u in users %}
+            <tr>
+                <td>{{ u[0] }}</td>
+                <td>{{ u[1] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- CHATS -->
+    <div class="card">
+        <h2>💬 Chat Logs</h2>
+
+        <table>
+            <tr>
+                <th>Email</th>
+                <th>Message</th>
+                <th>Response</th>
+                <th>Time</th>
+            </tr>
+
+            {% for c in chats %}
+            <tr>
+                <td>{{ c[1] }}</td>
+                <td>{{ c[2] }}</td>
+                <td>{{ c[3] }}</td>
+                <td>{{ c[4] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- FAQ ADD -->
+    <div class="card">
+        <h2>➕ Add FAQ (Train Bot)</h2>
+
+        <form method="POST" action="/add_faq">
+            <input type="text" name="question" placeholder="Enter question" required>
+            <input type="text" name="answer" placeholder="Enter answer" required>
+            <button type="submit">Add FAQ</button>
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>
