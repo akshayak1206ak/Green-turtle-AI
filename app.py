@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, jsonify
 from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
@@ -16,17 +16,15 @@ def init_db():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
-    # USERS TABLE
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        role TEXT NOT NULL
+        role TEXT DEFAULT 'user'
     )
     """)
 
-    # CHATS TABLE
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS chats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,11 +34,18 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS faq (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question TEXT,
+        answer TEXT
+    )
+    """)
+
     conn.commit()
     conn.close()
 
 
-# IMPORTANT: Run DB INIT ON START (RENDER SAFE)
 init_db()
 
 
@@ -59,23 +64,23 @@ def register():
         email = request.form["email"]
         password = request.form["password"]
 
-        hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
+        hashed = bcrypt.generate_password_hash(password).decode("utf-8")
 
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
         try:
             cursor.execute(
-                "INSERT INTO users (email, password, role) VALUES (?, ?, ?)",
-                (email, hashed_password, "user")
+                "INSERT INTO users (email, password) VALUES (?, ?)",
+                (email, hashed)
             )
             conn.commit()
-        except sqlite3.IntegrityError:
+        except:
             return "User already exists"
         finally:
             conn.close()
 
-        return redirect(url_for("login"))
+        return redirect("/login")
 
     return render_template("register.html")
 
@@ -91,7 +96,7 @@ def login():
         cursor = conn.cursor()
 
         user = cursor.execute(
-            "SELECT * FROM users WHERE email = ?",
+            "SELECT * FROM users WHERE email=?",
             (email,)
         ).fetchone()
 
@@ -101,31 +106,31 @@ def login():
             session["user_id"] = user[0]
             session["email"] = user[1]
             session["role"] = user[3]
-            return redirect(url_for("chat"))
+            return redirect("/chat")
 
         return "Invalid credentials"
 
     return render_template("login.html")
 
 
-# ================= CHAT =================
+# ================= CHAT PAGE =================
 @app.route("/chat")
 def chat():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return redirect("/login")
 
-    return render_template("index.html")
+    return render_template("index.html", user=session["email"])
 
 
-# ================= SEND MESSAGE =================
-@app.route("/send", methods=["POST"])
-def send():
+# ================= FIXED SEND MESSAGE API =================
+@app.route("/send_message", methods=["POST"])
+def send_message():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return jsonify({"error": "not logged in"})
 
-    message = request.form["message"]
+    data = request.get_json()
+    message = data.get("message")
 
-    # SIMPLE BOT (you can upgrade later with AI/ML)
     reply = "You said: " + message
 
     conn = sqlite3.connect(DATABASE)
@@ -139,14 +144,14 @@ def send():
     conn.commit()
     conn.close()
 
-    return redirect(url_for("chat"))
+    return jsonify({"response": reply})
 
 
 # ================= HISTORY =================
 @app.route("/history")
 def history():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return redirect("/login")
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -154,7 +159,7 @@ def history():
     chats = cursor.execute("""
         SELECT user_message, bot_reply 
         FROM chats 
-        WHERE user_id = ?
+        WHERE user_id=?
     """, (session["user_id"],)).fetchall()
 
     conn.close()
@@ -166,7 +171,42 @@ def history():
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("login"))
+    return redirect("/login")
+
+
+# ================= ADMIN (FIXED ROUTES) =================
+@app.route("/admin")
+def admin():
+    return render_template("admin.html", users=[], chats=[])
+
+
+@app.route("/analytics")
+def analytics():
+    return render_template(
+        "analytics.html",
+        users_count=0,
+        chats_count=0,
+        top_users=[]
+    )
+
+
+@app.route("/add_faq", methods=["POST"])
+def add_faq():
+    question = request.form["question"]
+    answer = request.form["answer"]
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO faq (question, answer) VALUES (?, ?)",
+        (question, answer)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin")
 
 
 # ================= RUN =================
