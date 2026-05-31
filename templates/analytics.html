@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Analytics</title>
+    <style>
+        body { font-family: Arial; background:#f1f5f9; padding:20px; }
+
+        .card {
+            background:white;
+            padding:20px;
+            margin:10px;
+            border-radius:10px;
+            display:inline-block;
+            width:200px;
+            text-align:center;
+        }
+
+        table {
+            width:100%;
+            background:white;
+            border-collapse: collapse;
+            margin-top:20px;
+        }
+
+        th, td {
+            padding:10px;
+            border:1px solid #ddd;
+        }
+
+        h1 { color:#0f766e; }
+    </style>
+</head>
+
+<body>
+
+<h1>📊 Admin Analytics Dashboard</h1>
+
+<div class="card">
+    <h2>{{ users_count }}</h2>
+    <p>Total Users</p>
+</div>
+
+<div class="card">
+    <h2>{{ chats_count }}</h2>
+    <p>Total Chats</p>
+</div>
+
+<h2>🔥 Top Active Users</h2>
+
+<table>
+    <tr>
+        <th>Email</th>
+        <th>Chats</th>
+    </tr>
+
+    {% for user in top_users %}
+    <tr>
+        <td>{{ user[0] }}</td>
+        <td>{{ user[1] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>

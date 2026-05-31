@@ -75,6 +75,12 @@ button {
     color: white;
     cursor: pointer;
 }
+
+#loader {
+    font-style: italic;
+    opacity: 0.7;
+    margin: 10px;
+}
 </style>
 
 </head>
@@ -83,7 +89,7 @@ button {
 
 <div class="container">
 
-    <!-- 🔥 TOP BAR -->
+    <!-- TOP BAR -->
     <div style="padding:10px; background:#e0f2fe; display:flex; justify-content:space-between; align-items:center;">
         
         <div>
@@ -97,7 +103,14 @@ button {
     <h1>🐢 Green Turtle AI</h1>
 
     <div id="chatBox">
+
         <div class="bot-message">Hello! How can I help you?</div>
+
+        <!-- LOADER -->
+        <div id="loader" class="bot-message" style="display:none;">
+            🤖 Green Turtle AI is thinking...
+        </div>
+
     </div>
 
     <div class="input-area">
@@ -124,31 +137,67 @@ function sendMessage() {
     let userText = userInput.value.trim();
     if (!userText) return;
 
-    document.getElementById("chatBox").innerHTML += `
-        <div class="user-message">${userText}</div>
-    `;
+    let chatBox = document.getElementById("chatBox");
 
-    fetch(`/get?msg=${encodeURIComponent(userText)}`)
-    .then(res => res.text())
-    .then(data => {
-
-        lastResponse = data;
-
-        document.getElementById("chatBox").innerHTML += `
-            <div class="bot-message">${data}</div>
-        `;
-
-        let chatBox = document.getElementById("chatBox");
-        chatBox.scrollTop = chatBox.scrollHeight;
-    });
+    // USER MESSAGE (SAFE)
+    let userDiv = document.createElement("div");
+    userDiv.className = "user-message";
+    userDiv.innerText = userText;
+    chatBox.appendChild(userDiv);
 
     userInput.value = "";
+
+    // SHOW LOADER
+    document.getElementById("loader").style.display = "block";
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    fetch("/send_message", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message: userText })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        document.getElementById("loader").style.display = "none";
+
+        if (data.error) {
+            let errDiv = document.createElement("div");
+            errDiv.className = "bot-message";
+            errDiv.innerText = "⚠️ Please login first";
+            chatBox.appendChild(errDiv);
+            return;
+        }
+
+        lastResponse = data.response;
+
+        // BOT MESSAGE (SAFE)
+        let botDiv = document.createElement("div");
+        botDiv.className = "bot-message";
+        botDiv.innerText = data.response;
+        chatBox.appendChild(botDiv);
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    })
+    .catch(err => {
+        document.getElementById("loader").style.display = "none";
+
+        let errDiv = document.createElement("div");
+        errDiv.className = "bot-message";
+        errDiv.innerText = "⚠️ Server error. Try again.";
+        chatBox.appendChild(errDiv);
+    });
 }
+
 
 /* ================= ENTER KEY ================= */
 document.getElementById("userInput").addEventListener("keypress", function(e){
     if (e.key === "Enter") sendMessage();
 });
+
 
 /* ================= VOICE INPUT ================= */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -171,6 +220,7 @@ function startVoice() {
     recognition.start();
 }
 
+
 /* ================= TEXT TO SPEECH ================= */
 function speakText(text) {
 
@@ -186,6 +236,7 @@ function speakText(text) {
     window.speechSynthesis.speak(utterance);
     isSpeaking = true;
 }
+
 
 /* ================= VOICE TOGGLE ================= */
 function toggleVoice() {
