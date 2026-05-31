@@ -16,6 +16,7 @@ def init_db():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
+    # USERS TABLE
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,6 +26,7 @@ def init_db():
     )
     """)
 
+    # CHATS TABLE
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS chats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,9 +40,8 @@ def init_db():
     conn.close()
 
 
-# FORCE INIT (IMPORTANT FOR RENDER)
-with app.app_context():
-    init_db()
+# IMPORTANT: Run DB INIT ON START (RENDER SAFE)
+init_db()
 
 
 # ================= HOME =================
@@ -116,7 +117,7 @@ def chat():
     return render_template("index.html")
 
 
-# ================= SAVE CHAT (OPTIONAL SIMPLE BOT) =================
+# ================= SEND MESSAGE =================
 @app.route("/send", methods=["POST"])
 def send():
     if "user_id" not in session:
@@ -124,7 +125,7 @@ def send():
 
     message = request.form["message"]
 
-    # simple bot reply (replace with ML later)
+    # SIMPLE BOT (you can upgrade later with AI/ML)
     reply = "You said: " + message
 
     conn = sqlite3.connect(DATABASE)
