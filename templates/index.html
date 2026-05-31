@@ -43,6 +43,8 @@ h1 {
     margin: 10px;
     border-radius: 10px;
     text-align: right;
+    max-width: 70%;
+    margin-left: auto;
 }
 
 .bot-message {
@@ -50,6 +52,7 @@ h1 {
     padding: 10px;
     margin: 10px;
     border-radius: 10px;
+    max-width: 70%;
 }
 
 .input-area {
@@ -64,6 +67,7 @@ input {
     padding: 10px;
     border-radius: 20px;
     border: 1px solid #ccc;
+    outline: none;
 }
 
 button {
@@ -76,10 +80,15 @@ button {
     cursor: pointer;
 }
 
+button:hover {
+    opacity: 0.9;
+}
+
 #loader {
+    display: none;
     font-style: italic;
-    opacity: 0.7;
     margin: 10px;
+    opacity: 0.7;
 }
 </style>
 
@@ -102,20 +111,18 @@ button {
 
     <h1>🐢 Green Turtle AI</h1>
 
+    <!-- CHAT BOX -->
     <div id="chatBox">
 
         <div class="bot-message">Hello! How can I help you?</div>
 
-        <!-- LOADER -->
-        <div id="loader" class="bot-message" style="display:none;">
-            🤖 Green Turtle AI is thinking...
-        </div>
+        <div id="loader">🤖 Bot is typing...</div>
 
     </div>
 
+    <!-- INPUT AREA -->
     <div class="input-area">
         <input type="text" id="userInput" placeholder="Type here...">
-
         <button onclick="startVoice()">🎤</button>
         <button onclick="sendMessage()">Send</button>
         <button onclick="toggleVoice()">🔊</button>
@@ -128,76 +135,71 @@ button {
 let recognition;
 let lastResponse = "";
 let isSpeaking = false;
-let utterance = null;
 
 /* ================= SEND MESSAGE ================= */
 function sendMessage() {
 
-    let userInput = document.getElementById("userInput");
-    let userText = userInput.value.trim();
-    if (!userText) return;
+    const input = document.getElementById("userInput");
+    const text = input.value.trim();
 
-    let chatBox = document.getElementById("chatBox");
+    if (!text) return;
 
-    // USER MESSAGE (SAFE)
-    let userDiv = document.createElement("div");
+    const chatBox = document.getElementById("chatBox");
+
+    // USER MESSAGE (SAFE DOM)
+    const userDiv = document.createElement("div");
     userDiv.className = "user-message";
-    userDiv.innerText = userText;
+    userDiv.innerText = text;
     chatBox.appendChild(userDiv);
 
-    userInput.value = "";
+    input.value = "";
+
+    chatBox.scrollTop = chatBox.scrollHeight;
 
     // SHOW LOADER
     document.getElementById("loader").style.display = "block";
-
-    chatBox.scrollTop = chatBox.scrollHeight;
 
     fetch("/send_message", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({ message: userText })
+        body: JSON.stringify({ message: text })
     })
     .then(res => res.json())
     .then(data => {
 
         document.getElementById("loader").style.display = "none";
 
+        const botDiv = document.createElement("div");
+        botDiv.className = "bot-message";
+
         if (data.error) {
-            let errDiv = document.createElement("div");
-            errDiv.className = "bot-message";
-            errDiv.innerText = "⚠️ Please login first";
-            chatBox.appendChild(errDiv);
-            return;
+            botDiv.innerText = "⚠️ Please login first";
+        } else {
+            botDiv.innerText = data.response;
+            lastResponse = data.response;
         }
 
-        lastResponse = data.response;
-
-        // BOT MESSAGE (SAFE)
-        let botDiv = document.createElement("div");
-        botDiv.className = "bot-message";
-        botDiv.innerText = data.response;
         chatBox.appendChild(botDiv);
-
         chatBox.scrollTop = chatBox.scrollHeight;
     })
-    .catch(err => {
+    .catch(() => {
+
         document.getElementById("loader").style.display = "none";
 
-        let errDiv = document.createElement("div");
-        errDiv.className = "bot-message";
-        errDiv.innerText = "⚠️ Server error. Try again.";
-        chatBox.appendChild(errDiv);
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "bot-message";
+        errorDiv.innerText = "⚠️ Server error. Try again.";
+
+        chatBox.appendChild(errorDiv);
     });
 }
-
 
 /* ================= ENTER KEY ================= */
 document.getElementById("userInput").addEventListener("keypress", function(e){
     if (e.key === "Enter") sendMessage();
 });
-
 
 /* ================= VOICE INPUT ================= */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -220,13 +222,12 @@ function startVoice() {
     recognition.start();
 }
 
-
 /* ================= TEXT TO SPEECH ================= */
 function speakText(text) {
 
     window.speechSynthesis.cancel();
 
-    utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "en-IN";
 
     utterance.onend = () => {
@@ -237,7 +238,6 @@ function speakText(text) {
     isSpeaking = true;
 }
 
-
 /* ================= VOICE TOGGLE ================= */
 function toggleVoice() {
 
@@ -245,11 +245,10 @@ function toggleVoice() {
 
     if (!isSpeaking) {
         speakText(lastResponse);
-        return;
+    } else {
+        window.speechSynthesis.cancel();
+        isSpeaking = false;
     }
-
-    window.speechSynthesis.cancel();
-    isSpeaking = false;
 }
 
 </script>

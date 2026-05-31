@@ -1,22 +1,23 @@
 import sqlite3
 from flask_bcrypt import Bcrypt
 
-bcrypt = Bcrypt()
+def create_admin(email, password):
+    bcrypt = Bcrypt()
 
-conn = sqlite3.connect("database.db")
-cursor = conn.cursor()
+    hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
-email = "admin@gmail.com"
-password = "admin123"
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
 
-hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
+    cursor.execute("""
+    INSERT OR IGNORE INTO admin (email, password)
+    VALUES (?, ?)
+    """, (email, hashed_password))
 
-cursor.execute("""
-INSERT OR IGNORE INTO users (email, password, role)
-VALUES (?, ?, ?)
-""", (email, hashed_password, "admin"))
+    conn.commit()
+    conn.close()
 
-conn.commit()
-conn.close()
+    print("Admin created successfully")
 
-print("Admin created successfully")
+if __name__ == "__main__":
+    create_admin("admin@gmail.com", "admin123")

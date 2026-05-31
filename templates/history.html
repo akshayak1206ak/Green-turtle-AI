@@ -2,20 +2,63 @@
 <html>
 <head>
     <title>Chat History</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background:#f1f5f9;
+            padding:20px;
+        }
+
+        .container {
+            background:white;
+            padding:20px;
+            border-radius:10px;
+            max-width:700px;
+            margin:auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align:center;
+            color:#0f766e;
+        }
+
+        a {
+            display:inline-block;
+            margin-bottom:15px;
+            text-decoration:none;
+            color:#0f766e;
+            font-weight:bold;
+        }
+
+        .chat {
+            margin-bottom:15px;
+            padding:10px;
+            border-bottom:1px solid #ddd;
+        }
+    </style>
+
 </head>
 
 <body>
-    <h2>Your Chat History</h2>
+
+<div class="container">
+
+    <h2>💬 Your Chat History</h2>
 
     <a href="/chat">⬅ Back to Chat</a>
 
     <hr>
 
     {% for chat in chats %}
-        <p><b>You:</b> {{ chat[0] }}</p>
-        <p><b>Bot:</b> {{ chat[1] }}</p>
-        <hr>
+        <div class="chat">
+            <p><b>You:</b> {{ chat[0] }}</p>
+            <p><b>Bot:</b> {{ chat[1] }}</p>
+        </div>
     {% endfor %}
+
+</div>
 
 </body>
 </html>

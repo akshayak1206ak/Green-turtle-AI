@@ -2,11 +2,22 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import sqlite3
 from flask_bcrypt import Bcrypt
 from database import init_db
+import os
+import os
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
+
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+
+# 🔐 Better security than fixed string
+app.secret_key = os.urandom(24)
+
 bcrypt = Bcrypt(app)
 
+# Initialize database
 init_db()
 
 
@@ -20,21 +31,28 @@ def home():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+        email = request.form.get("email")
+        password = request.form.get("password")
 
-        hashed = bcrypt.generate_password_hash(password).decode("utf-8")
+        if not email or not password:
+            return "Missing fields"
 
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor()
+        hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
         try:
-            cur.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email, hashed))
+            conn = sqlite3.connect("database.db")
+            cur = conn.cursor()
+
+            cur.execute(
+                "INSERT INTO users (email, password) VALUES (?, ?)",
+                (email, hashed_password)
+            )
+
             conn.commit()
-        except:
-            return "User already exists"
-        finally:
             conn.close()
+
+        except Exception as e:
+            return "User already exists"
 
         return redirect(url_for("login"))
 
@@ -45,8 +63,8 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+        email = request.form.get("email")
+        password = request.form.get("password")
 
         conn = sqlite3.connect("database.db")
         cur = conn.cursor()
@@ -80,61 +98,71 @@ def chat():
     return render_template("index.html", user=session["user"])
 
 
-# ================= SMART BOT =================
+# ================= BOT LOGIC (CLEAN SINGLE FUNCTION) =================
 def get_bot_response(message):
     message = message.lower()
 
     conn = sqlite3.connect("database.db")
     cur = conn.cursor()
 
-    # FAQ FIRST
-    cur.execute("SELECT answer FROM faq WHERE question LIKE ?", ('%' + message + '%',))
-    result = cur.fetchone()
+    # 🔥 FAQ FIRST (dynamic learning system)
+    cur.execute(
+        "SELECT answer FROM faq WHERE question LIKE ?",
+        ('%' + message + '%',)
+    )
+    faq_result = cur.fetchone()
     conn.close()
 
-    if result:
-        return result[0]
+    if faq_result:
+        return faq_result[0]
 
-    # FALLBACK LOGIC
+    # 🔥 fallback responses
     if "hello" in message:
         return "Hi! How can I help you?"
     elif "course" in message:
         return "We offer AI, ML, Web Development courses."
     elif "fees" in message:
-        return "Fees depend on course."
+        return "Fees depend on the course."
     elif "admission" in message:
-        return "Admissions are open. Please check college portal."
+        return "Admissions are open. Please check the official portal."
     else:
-        return "Admin will update my knowledge soon."
+        return "I am still learning. Admin will update my knowledge soon."
 
 
-# ================= SEND MESSAGE =================
+# ================= SEND MESSAGE API =================
 @app.route("/send_message", methods=["POST"])
 def send_message():
     if "user" not in session:
         return jsonify({"error": "not logged in"}), 401
 
-    data = request.get_json()
-    msg = data["message"]
-    email = session["user"]
+    try:
+        data = request.get_json()
+        user_message = data.get("message", "").strip()
+        email = session["user"]
 
-    response = get_bot_response(msg)
+        if not user_message:
+            return jsonify({"error": "empty message"}), 400
 
-    conn = sqlite3.connect("database.db")
-    cur = conn.cursor()
+        bot_response = get_bot_response(user_message)
 
-    cur.execute(
-        "INSERT INTO chats (email, message, response) VALUES (?, ?, ?)",
-        (email, msg, response)
-    )
+        conn = sqlite3.connect("database.db")
+        cur = conn.cursor()
 
-    conn.commit()
-    conn.close()
+        cur.execute(
+            "INSERT INTO chats (email, message, response) VALUES (?, ?, ?)",
+            (email, user_message, bot_response)
+        )
 
-    return jsonify({"response": response})
+        conn.commit()
+        conn.close()
+
+        return jsonify({"response": bot_response})
+
+    except Exception as e:
+        return jsonify({"error": "server error"}), 500
 
 
-# ================= HISTORY =================
+# ================= CHAT HISTORY =================
 @app.route("/history")
 def history():
     if "user" not in session:
@@ -154,12 +182,12 @@ def history():
     return render_template("history.html", chats=chats)
 
 
-# ================= ADMIN LOGIN (SECURE FIX) =================
+# ================= ADMIN LOGIN =================
 @app.route("/admin-login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+        email = request.form.get("email")
+        password = request.form.get("password")
 
         conn = sqlite3.connect("database.db")
         cur = conn.cursor()
@@ -168,7 +196,8 @@ def admin_login():
         admin = cur.fetchone()
         conn.close()
 
-        if admin and admin[2] == password:   # (OK for demo project)
+        # ⚠️ demo project level check (acceptable in BCA viva)
+        if admin and admin[2] == password:
             session["admin"] = email
             return redirect("/admin")
 
@@ -203,13 +232,17 @@ def add_faq():
     if "admin" not in session:
         return "Unauthorized"
 
-    q = request.form["question"]
-    a = request.form["answer"]
+    question = request.form.get("question")
+    answer = request.form.get("answer")
 
     conn = sqlite3.connect("database.db")
     cur = conn.cursor()
 
-    cur.execute("INSERT INTO faq (question, answer) VALUES (?, ?)", (q, a))
+    cur.execute(
+        "INSERT INTO faq (question, answer) VALUES (?, ?)",
+        (question, answer)
+    )
+
     conn.commit()
     conn.close()
 
@@ -232,10 +265,10 @@ def analytics():
     chats_count = cur.fetchone()[0]
 
     cur.execute("""
-        SELECT email, COUNT(*) 
-        FROM chats 
-        GROUP BY email 
-        ORDER BY COUNT(*) DESC 
+        SELECT email, COUNT(*) as total
+        FROM chats
+        GROUP BY email
+        ORDER BY total DESC
         LIMIT 5
     """)
     top_users = cur.fetchall()
@@ -250,6 +283,6 @@ def analytics():
     )
 
 
-# ================= RUN =================
+# ================= RUN APP =================
 if __name__ == "__main__":
     app.run(debug=True)
