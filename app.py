@@ -122,29 +122,38 @@ def chat():
     return render_template("index.html", user=session["email"])
 
 
-# ================= FIXED SEND MESSAGE API =================
+# ================= FIXED CHAT API =================
 @app.route("/send_message", methods=["POST"])
 def send_message():
     if "user_id" not in session:
         return jsonify({"error": "not logged in"})
 
-    data = request.get_json()
-    message = data.get("message")
+    try:
+        data = request.get_json(force=True)
+        message = data.get("message", "").strip()
 
-    reply = "You said: " + message
+        if not message:
+            return jsonify({"error": "empty message"})
 
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
+        # SIMPLE BOT RESPONSE (replace with AI later)
+        reply = "You said: " + message
 
-    cursor.execute("""
-        INSERT INTO chats (user_id, user_message, bot_reply)
-        VALUES (?, ?, ?)
-    """, (session["user_id"], message, reply))
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
 
-    conn.commit()
-    conn.close()
+        cursor.execute("""
+            INSERT INTO chats (user_id, user_message, bot_reply)
+            VALUES (?, ?, ?)
+        """, (session["user_id"], message, reply))
 
-    return jsonify({"response": reply})
+        conn.commit()
+        conn.close()
+
+        return jsonify({"response": reply})
+
+    except Exception as e:
+        print("ERROR:", e)
+        return jsonify({"error": "server error"})
 
 
 # ================= HISTORY =================
@@ -174,7 +183,7 @@ def logout():
     return redirect("/login")
 
 
-# ================= ADMIN (FIXED ROUTES) =================
+# ================= ADMIN (SAFE STUBS) =================
 @app.route("/admin")
 def admin():
     return render_template("admin.html", users=[], chats=[])
@@ -182,12 +191,10 @@ def admin():
 
 @app.route("/analytics")
 def analytics():
-    return render_template(
-        "analytics.html",
-        users_count=0,
-        chats_count=0,
-        top_users=[]
-    )
+    return render_template("analytics.html",
+                           users_count=0,
+                           chats_count=0,
+                           top_users=[])
 
 
 @app.route("/add_faq", methods=["POST"])
