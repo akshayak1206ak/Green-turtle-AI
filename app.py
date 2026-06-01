@@ -1,3 +1,4 @@
+from chatbot import get_response
 import os
 import sqlite3
 from flask import Flask, render_template, request, redirect, session, url_for, jsonify
@@ -136,7 +137,7 @@ def send_message():
             return jsonify({"error": "empty message"})
 
         # SIMPLE BOT RESPONSE (replace with AI later)
-        reply = "You said: " + message
+        reply = get_response(message)
 
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
